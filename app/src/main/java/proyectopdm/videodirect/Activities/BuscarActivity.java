@@ -6,6 +6,7 @@ import android.content.IntentFilter;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
+import android.net.wifi.p2p.WifiP2pDeviceList;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceRequest;
 import android.os.Bundle;
@@ -34,14 +35,30 @@ public class BuscarActivity extends Activity {
     private ArrayList<WifiP2pDevice> devicesList = new ArrayList<WifiP2pDevice>();
     private AppReceiver receiver;
     private final IntentFilter intentFilter = new IntentFilter();
-    private WifiP2pDnsSdServiceRequest serviceRequest;
-    private Handler serviceDiscoveringHandler;
-    private Runnable serviceDiscoveringRunnable = new Runnable() {
+    private WifiP2pManager.PeerListListener peerListListener = new WifiP2pManager.PeerListListener() {
         @Override
-        public void run() {
-            discoverServices();
+        public void onPeersAvailable(WifiP2pDeviceList peerList) {
+
+            // Out with the old, in with the new.
+            devicesList.clear();
+            devicesList.addAll(peerList.getDeviceList());
+            servicesAdapter.clear();
+
+            for(WifiP2pDevice device:devicesList){
+                servicesAdapter.add(device.deviceName);
+            }
+
+            // If an AdapterView is backed by this data, notify it
+            // of the change.  For instance, if you have a ListView of available
+            // peers, trigger an update.
+            servicesAdapter.notifyDataSetChanged();
+            if (devicesList.size() == 0) {
+                Log.d("Warning", "No devices found");
+                return;
+            }
         }
     };
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,8 +85,6 @@ public class BuscarActivity extends Activity {
         manager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
         channel = manager.initialize(this, getMainLooper(), null);
 
-
-
         servicesListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -77,13 +92,12 @@ public class BuscarActivity extends Activity {
             }
         });
 
-        serviceDiscoveringHandler = new Handler();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        receiver = new AppReceiver (manager, channel, this);
+        receiver = new AppReceiver (manager, channel, this, peerListListener);
         registerReceiver(receiver, intentFilter);
     }
 
@@ -94,89 +108,21 @@ public class BuscarActivity extends Activity {
     }
 
     public void buscar(View v) {
-        prepareServiceDiscovery();
-        discoverServices();
-    }
+        manager.discoverPeers(channel, new WifiP2pManager.ActionListener() {
 
-    private void discoverServices() {
-
-        manager.removeServiceRequest(channel, serviceRequest, new WifiP2pManager.ActionListener() {
             @Override
             public void onSuccess() {
-                manager.addServiceRequest(channel, serviceRequest, new WifiP2pManager.ActionListener() {
-                    @Override
-                    public void onSuccess() {
-                        manager.discoverServices(channel, new WifiP2pManager.ActionListener() {
-                            @Override
-                            public void onSuccess() {
-                                serviceDiscoveringHandler.postDelayed(serviceDiscoveringRunnable,30000);
-                            }
-
-                            @Override
-                            public void onFailure(int reason) {
-                                // Command failed.  Check for P2P_UNSUPPORTED, ERROR, or BUSY
-                                if (reason == WifiP2pManager.P2P_UNSUPPORTED)
-                                    Log.d("ERROR", "P2P isn't supported on this device.");
-                            }
-
-                        });
-                    }
-
-                    @Override
-                    public void onFailure(int reason) {
-
-                    }
-                });
+                // Code for when the discovery initiation is successful goes here.
+                // No services have actually been discovered yet, so this method
+                // can often be left blank.  Code for peer discovery goes in the
+                // onReceive method, detailed below.
             }
 
             @Override
-            public void onFailure(int reason) {
-
+            public void onFailure(int reasonCode) {
+                Toast.makeText(BuscarActivity.this, "Fallo la busqueda. Reintentar", Toast.LENGTH_SHORT).show();
             }
         });
-
-
-
-
-
-    }
-
-    private void prepareServiceDiscovery(){
-        WifiP2pManager.DnsSdTxtRecordListener txtListener = new WifiP2pManager.DnsSdTxtRecordListener() {
-
-            @Override
-            public void onDnsSdTxtRecordAvailable(String fullDomain, Map record, WifiP2pDevice device) {
-                    Log.d("DirectVideo", "DnsSdTxtRecord available -" + record.toString());
-
-                    buddies.put(device.deviceAddress, (String) record.get("userName"));
-
-            }
-        };
-
-        WifiP2pManager.DnsSdServiceResponseListener servListener = new WifiP2pManager.DnsSdServiceResponseListener() {
-            @Override
-            public void onDnsSdServiceAvailable(String instanceName, String registrationType,
-                                                WifiP2pDevice resourceType) {
-
-                if (buddies.containsKey(resourceType.deviceAddress)) {
-                    resourceType.deviceName = buddies
-                            .containsKey(resourceType.deviceAddress) ? buddies
-                            .get(resourceType.deviceAddress) : resourceType.deviceName;
-
-                    // Add to the custom adapter defined specifically for showing
-                    // wifi devices.
-                    devicesList.add(resourceType);
-                    servicesAdapter.add(resourceType.deviceName);
-                    servicesAdapter.notifyDataSetChanged();
-                    Log.d("DirectVideo", "onBonjourServiceAvailable " + instanceName);
-
-                }
-            }
-        };
-
-        manager.setDnsSdResponseListeners(channel, servListener, txtListener);
-
-        serviceRequest = WifiP2pDnsSdServiceRequest.newInstance();
     }
 
     private void connect(WifiP2pDevice device) {
@@ -193,7 +139,7 @@ public class BuscarActivity extends Activity {
 
             @Override
             public void onFailure(int reason) {
-                Toast.makeText(BuscarActivity.this, "Connect failed. Retry.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(BuscarActivity.this, "Fallo la conexión. Reintentar", Toast.LENGTH_SHORT).show();
             }
         });
 

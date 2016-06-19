@@ -28,13 +28,9 @@ public class MainActivity extends AppCompatActivity {
     private Camera mCamera;
     private CameraPreview mPreview;
     private Button capture;
-    private WifiP2pManager manager;
-    private WifiP2pManager.Channel channel;
     private MediaRecorder mMediaRecorder;
     private VideoStreamServer streamServer;
     private int toogle = 0;
-    private Handler serviceBroadcastingHandler;
-    private Runnable serviceBroadcastingRunnable;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -42,28 +38,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         capture = (Button) findViewById(R.id.button_capture);
-
-        manager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
-        channel = manager.initialize(this, getMainLooper(), null);
-
-        serviceBroadcastingHandler = new Handler();
-
-        serviceBroadcastingRunnable = new Runnable() {
-            @Override
-            public void run() {
-                manager.discoverPeers(channel, new WifiP2pManager.ActionListener() {
-                    @Override
-                    public void onSuccess() {
-                    }
-
-                    @Override
-                    public void onFailure(int error) {
-                    }
-                });
-                serviceBroadcastingHandler
-                        .postDelayed(serviceBroadcastingRunnable, 30000);
-            }
-        };
 
         streamServer = new VideoStreamServer(8080);
     }
@@ -89,39 +63,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void start(View v){
-        manager.clearLocalServices(channel, new WifiP2pManager.ActionListener() {
-            @Override
-            public void onSuccess() {
-                Map data = new HashMap();
-                data.put("listenport", String.valueOf(8080));
-                data.put("serviceName", "VideoDirect");
-                data.put("userName", "alguien_" + (int) Math.random() * 1000);
-                data.put("pasword", "");
-
-                WifiP2pDnsSdServiceInfo serviceInfo = WifiP2pDnsSdServiceInfo.newInstance("VideoDirect",
-                        "_video-direct._tcp", data);
-
-                manager.addLocalService(channel, serviceInfo, new WifiP2pManager.ActionListener() {
-                    @Override
-                    public void onSuccess() {
-                        serviceBroadcastingHandler.postDelayed(serviceBroadcastingRunnable,30000);
-                    }
-
-                    @Override
-                    public void onFailure(int reason) {
-                        // Ver razón de la falla
-                    }
-                });
-            }
-
-            @Override
-            public void onFailure(int reason) {
-
-            }
-        });
-
-
-
         if (toogle == 1) {
             // stop recording and release camera
             mMediaRecorder.stop();  // stop the recording
