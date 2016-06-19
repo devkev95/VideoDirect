@@ -8,9 +8,7 @@ import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pDeviceList;
 import android.net.wifi.p2p.WifiP2pManager;
-import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceRequest;
 import android.os.Bundle;
-import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
@@ -20,14 +18,12 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
 
 import proyectopdm.videodirect.AppReceiver;
 import proyectopdm.videodirect.R;
 
 public class BuscarActivity extends Activity {
 
-    final HashMap<String, String> buddies = new HashMap<String, String>();
     private WifiP2pManager.Channel channel;
     private WifiP2pManager manager;
     private ListView servicesListView;

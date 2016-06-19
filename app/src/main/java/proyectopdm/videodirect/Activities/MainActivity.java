@@ -31,6 +31,10 @@ public class MainActivity extends AppCompatActivity {
     private MediaRecorder mMediaRecorder;
     private VideoStreamServer streamServer;
     private int toogle = 0;
+    private Handler broadcastingHandler;
+    private Runnable runnableBroadcastingHandler;
+    private WifiP2pManager manager;
+    private WifiP2pManager.Channel channel;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -40,6 +44,27 @@ public class MainActivity extends AppCompatActivity {
         capture = (Button) findViewById(R.id.button_capture);
 
         streamServer = new VideoStreamServer(8080);
+
+        manager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
+        channel = manager.initialize(this, getMainLooper(), null);
+
+        broadcastingHandler = new Handler();
+        runnableBroadcastingHandler = new Runnable() {
+            @Override
+            public void run() {
+                manager.discoverPeers(channel, new WifiP2pManager.ActionListener() {
+                    @Override
+                    public void onSuccess() {
+                    }
+
+                    @Override
+                    public void onFailure(int error) {
+                    }
+                });
+               broadcastingHandler
+                        .postDelayed(runnableBroadcastingHandler, 30000);
+            }
+        };
     }
 
     @Override
@@ -64,6 +89,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void start(View v){
         if (toogle == 1) {
+            broadcastingHandler.removeCallbacks(runnableBroadcastingHandler);
             // stop recording and release camera
             mMediaRecorder.stop();  // stop the recording
             releaseMediaRecorder(); // release the MediaRecorder object
@@ -79,6 +105,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
         } else {
+            broadcastingHandler.postDelayed(runnableBroadcastingHandler,30000);
             // initialize video camera
             if (prepareVideoRecorder()) {
                 // Camera is available and unlocked, MediaRecorder is prepared,

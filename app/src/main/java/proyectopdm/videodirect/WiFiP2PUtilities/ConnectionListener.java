@@ -14,22 +14,25 @@ import proyectopdm.videodirect.Activities.ShowVideo;
  */
 public class ConnectionListener implements WifiP2pManager.ConnectionInfoListener{
 
-    Context context;
+    private InetAddress groupOwnerAddress;
 
-    public ConnectionListener(Context context){
-        this.context = context;
+    public ConnectionListener(){
+
     }
 
     @Override
     public void onConnectionInfoAvailable(WifiP2pInfo info) {
 
         // InetAddress from WifiP2pInfo struct.
-        InetAddress groupOwnerAddress = info.groupOwnerAddress;
+        groupOwnerAddress = null;
+
         if (info.groupFormed) {
-            Intent intent = new Intent(context, ShowVideo.class);
-            intent.putExtra("serverIp", groupOwnerAddress.getHostAddress());
-            context.startActivity(intent);
+            groupOwnerAddress = info.groupOwnerAddress;
         }
 
+    }
+
+    public InetAddress getGroupOwnerAddress() {
+        return groupOwnerAddress;
     }
 }

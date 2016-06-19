@@ -9,6 +9,9 @@ import android.net.wifi.p2p.WifiP2pDeviceList;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.util.Log;
 
+import java.net.InetAddress;
+
+import proyectopdm.videodirect.Activities.ShowVideo;
 import proyectopdm.videodirect.WiFiP2PUtilities.ConnectionListener;
 
 /**
@@ -64,8 +67,17 @@ public class AppReceiver extends BroadcastReceiver {
                 // We are connected with the other device, request connection
                 // info to find group owner IP
 
-                connectionListener = new ConnectionListener(context);
+                connectionListener = new ConnectionListener();
                 manager.requestConnectionInfo(channel, connectionListener);
+                InetAddress groupOwnerAddress = connectionListener.getGroupOwnerAddress();
+                if(groupOwnerAddress != null) {
+                    Intent showBroadcasting = new Intent();
+                    showBroadcasting.setClassName("proyectopdm.videodirect.Activities","proyectopdm.videodirect." +
+                            "Activities.ShowVideo");
+                    showBroadcasting.putExtra("serverIp", groupOwnerAddress.getHostAddress());
+                    showBroadcasting.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    context.getApplicationContext().startActivity(showBroadcasting);
+                }
             }
 
 
