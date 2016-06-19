@@ -1,4 +1,4 @@
-package proyectopdm.videodirect.cameraServices;
+package proyectopdm.videodirect.CameraServices;
 
 import android.content.Context;
 import android.hardware.Camera;
@@ -19,7 +19,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
 
     public CameraPreview(Context context, Camera camera) {
         super(context);
-        mCamera = camera;
+        setCamera(camera);
 
         mHolder = getHolder();
         mHolder.addCallback(this);
@@ -36,7 +36,12 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
     }
 
     public void surfaceDestroyed(SurfaceHolder holder) {
-        // empty. Take care of releasing the Camera preview in your activity.
+        // Surface will be destroyed when we return, so stop the preview.
+        if (mCamera != null) {
+            // Call stopPreview() to stop updating the preview surface.
+            mCamera.stopPreview();
+        }
+
     }
 
     public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
@@ -65,6 +70,44 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
 
         } catch (Exception e){
             Log.d(TAG, "Error starting camera preview: " + e.getMessage());
+        }
+    }
+
+    private void stopPreviewAndFreeCamera() {
+
+        if (mCamera != null) {
+            // Call stopPreview() to stop updating the preview surface.
+            mCamera.stopPreview();
+
+            mCamera.setPreviewCallback(null);
+            // Important: Call release() to release the camera for use by other
+            // applications. Applications should release the camera immediately
+            // during onPause() and re-open() it during onResume()).
+            mCamera.release();
+
+            mCamera = null;
+        }
+    }
+
+
+
+    public void setCamera(Camera camera) {
+        if (mCamera == camera) { return; }
+
+        stopPreviewAndFreeCamera();
+
+        mCamera = camera;
+
+        if (mCamera != null) {
+            try {
+                mCamera.setPreviewDisplay(mHolder);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            // Important: Call startPreview() to start updating the preview
+            // surface. Preview must be started before you can take a picture.
+            mCamera.startPreview();
         }
     }
 
